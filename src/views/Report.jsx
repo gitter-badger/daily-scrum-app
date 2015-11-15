@@ -29,9 +29,11 @@ var ReportPage = React.createClass({
   getInitialState: function() {
     return {
       projectList: [],
+      taskDefault: [],
       taskList: [],
+      userDefault: [],
       userList: [],
-      userHaveTask: []
+      projectSelected: []
     };
   },
 
@@ -75,6 +77,7 @@ var ReportPage = React.createClass({
   _onGetAllUserSuccess: function(body) {
     console.log('_onGetAllUserSuccess', body);
     this.setState({
+      userDefault: body.data,
       userList: body.data
     });
   },
@@ -104,6 +107,7 @@ var ReportPage = React.createClass({
       }
     });
     this.setState({
+      taskDefault: data2,
       taskList: data2
     });
 
@@ -126,9 +130,13 @@ var ReportPage = React.createClass({
   _onGetAllProjectFail: function() {
   },
 
-  onSelectChanged: function(e) {
+  onSelectChanged: function(projectId) {
+    //Set state to default before the next filter
+    this.state.taskList = this.state.taskDefault;
+    this.state.userList = this.state.userDefault;
+
     var taskFiltered = this.state.taskList.filter(function(item) {
-        return (item._project === e);
+        return (item._project === projectId);
     });
 
     var userOfTask = [];
@@ -186,7 +194,7 @@ var ReportPage = React.createClass({
         </div>
         <div className="col-sm-2">
           <Select name="_project" clearable={false} disabled={true} value={item._project}
-            options={this.state.projectList} />
+            options={projectOptions} />
         </div>
         <div className="col-sm-2">
           <Select name="estimation" clearable={false} disabled={true}
@@ -212,7 +220,7 @@ var ReportPage = React.createClass({
             </div>
             <div className="col-sm-2">
               <Select name="_project" clearable={false} disabled={true} value={item._project}
-                options={this.state.projectList} />
+                options={projectOptions} />
             </div>
             <div className="col-sm-2">
               <Select name="estimation" clearable={false} disabled={true}
