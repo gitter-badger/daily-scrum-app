@@ -60522,7 +60522,7 @@
 	  _onGetAllProjectFail: function() {
 	  },
 
-	  onSelectChanged: function(projectId) {
+	  onSelectedProject: function(projectId) {
 	    //Set state to default before the next filter
 	    this.state.taskList = this.state.taskDefault;
 	    this.state.userList = this.state.userDefault;
@@ -60543,6 +60543,13 @@
 	    this.setState({
 	        taskList: taskFiltered,
 	        userList: userFiltered
+	    });
+	  },
+
+	    onClickSetDefault: function(){
+	    this.setState({
+	      taskList: this.state.taskDefault,
+	      userList: this.state.userDefault
 	    });
 	  },
 
@@ -60663,11 +60670,15 @@
 
 	    return (
 	      React.DOM.div({className: "row"}, 
+	      React.DOM.h4(null, "CHOOSE PROJECT"), 
 	        React.DOM.div({className: "row"}, 
 	          React.DOM.div({className: "col-sm-5"}, 
-	            React.DOM.h4(null, "CHOOSE PROJECT"), 
+
 	            Select({name: "form-field-name", value: this.state.projectList._id, clearable: false, 
-	              options: this.state.projectList, onChange: this.onSelectChanged})
+	              options: this.state.projectList, onChange: this.onSelectedProject})
+	          ), 
+	          React.DOM.div({className: "col-sm-7"}, 
+	            React.DOM.button({className: "btn btn-default", onClick: this.onClickSetDefault}, "Set Default")
 	          )
 	        ), 
 	        React.DOM.div({className: "col-sm-12"}, 

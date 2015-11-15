@@ -130,7 +130,7 @@ var ReportPage = React.createClass({
   _onGetAllProjectFail: function() {
   },
 
-  onSelectChanged: function(projectId) {
+  onSelectedProject: function(projectId) {
     //Set state to default before the next filter
     this.state.taskList = this.state.taskDefault;
     this.state.userList = this.state.userDefault;
@@ -151,6 +151,13 @@ var ReportPage = React.createClass({
     this.setState({
         taskList: taskFiltered,
         userList: userFiltered
+    });
+  },
+
+    onClickSetDefault: function(){
+    this.setState({
+      taskList: this.state.taskDefault,
+      userList: this.state.userDefault
     });
   },
 
@@ -271,11 +278,15 @@ var ReportPage = React.createClass({
 
     return (
       <div className="row">
+      <h4>CHOOSE PROJECT</h4>
         <div className="row">
           <div className="col-sm-5">
-            <h4>CHOOSE PROJECT</h4>
+
             <Select name="form-field-name" value={this.state.projectList._id} clearable={false}
-              options={this.state.projectList} onChange={this.onSelectChanged} />
+              options={this.state.projectList} onChange={this.onSelectedProject} />
+          </div>
+          <div className="col-sm-7">
+            <button className="btn btn-default" onClick={this.onClickSetDefault}>Set Default</button>
           </div>
         </div>
         <div className="col-sm-12">
