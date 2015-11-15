@@ -150,6 +150,7 @@ var ProjectPage = React.createClass({
 
   onChange: function(e) {
     var model = this.state.model;
+    console.log(model);
     model[e.target.name] = e.target.value;
     this.setState({model: model});
   },
@@ -240,7 +241,7 @@ var ProjectPage = React.createClass({
             </fieldset>
           </form>
 
-          <h3>Project Detail</h3>
+          <h3>Project Detail</h3>{this.state.model.name}
           <table className="table table-striped">
             <tbody>
               {this.state.userProjectList.map(function(item, index){

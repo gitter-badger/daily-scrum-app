@@ -30,7 +30,8 @@ var ReportPage = React.createClass({
     return {
       projectList: [],
       taskList: [],
-      userList: []
+      userList: [],
+      userHaveTask: []
     };
   },
 
@@ -96,9 +97,16 @@ var ReportPage = React.createClass({
       return newItem;
     });
     console.log('_onFindTaskSuccess', data2);
+
+        data2.forEach(function(item) {
+      if (!item._user) {
+        item._user = {};
+      }
+    });
     this.setState({
       taskList: data2
     });
+
   },
   _onFindTaskFail: function(data) {
   },
@@ -118,12 +126,28 @@ var ReportPage = React.createClass({
   _onGetAllProjectFail: function() {
   },
 
-  onSelectChanged: function() {
-    console.log('onSelectChanged');
+  onSelectChanged: function(e) {
+    var taskFiltered = this.state.taskList.filter(function(item) {
+        return (item._project === e);
+    });
+
+    var userOfTask = [];
+    _.forEach(taskFiltered, function(task) {
+        userOfTask.push(task._user);
+    });
+
+    var userFiltered = _.uniq(userOfTask, function(user) {
+        return user._id;
+    });
+
+    this.setState({
+        taskList: taskFiltered,
+        userList: userFiltered
+    });
   },
 
   renderUserTask: function(arr, userId) {
-    console.log('renderUserTask', arr, userId);
+    //console.log('renderUserTask', arr, userId);
     var projectOptions = this.state.projectList;
     var timeRangeOptions = [
       { value: '0.5', label: '30 mins' },
@@ -162,7 +186,7 @@ var ReportPage = React.createClass({
         </div>
         <div className="col-sm-2">
           <Select name="_project" clearable={false} disabled={true} value={item._project}
-            options={projectOptions} />
+            options={this.state.projectList} />
         </div>
         <div className="col-sm-2">
           <Select name="estimation" clearable={false} disabled={true}
@@ -188,7 +212,7 @@ var ReportPage = React.createClass({
             </div>
             <div className="col-sm-2">
               <Select name="_project" clearable={false} disabled={true} value={item._project}
-                options={projectOptions} />
+                options={this.state.projectList} />
             </div>
             <div className="col-sm-2">
               <Select name="estimation" clearable={false} disabled={true}
@@ -239,13 +263,13 @@ var ReportPage = React.createClass({
 
     return (
       <div className="row">
-        {/*<div className="row">
+        <div className="row">
           <div className="col-sm-5">
             <h4>CHOOSE PROJECT</h4>
-            <Select name="form-field-name" value="nafoods" clearable={false}
-              options={projectOptions} onChange={this.onSelectChanged} />
+            <Select name="form-field-name" value={this.state.projectList._id} clearable={false}
+              options={this.state.projectList} onChange={this.onSelectChanged} />
           </div>
-        </div>*/}
+        </div>
         <div className="col-sm-12">
           <h4>REPORT/TODAY</h4>
         </div>

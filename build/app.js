@@ -346,7 +346,9 @@
 	        currentQueue = queue;
 	        queue = [];
 	        while (++queueIndex < len) {
-	            currentQueue[queueIndex].run();
+	            if (currentQueue) {
+	                currentQueue[queueIndex].run();
+	            }
 	        }
 	        queueIndex = -1;
 	        len = queue.length;
@@ -398,7 +400,6 @@
 	    throw new Error('process.binding is not supported');
 	};
 
-	// TODO(shtylman)
 	process.cwd = function () { return '/' };
 	process.chdir = function (dir) {
 	    throw new Error('process.chdir is not supported');
@@ -21301,15 +21302,15 @@
 	 * of patent rights can be found in the PATENTS file in the same directory.
 	 */
 
-	module.exports.Dispatcher = __webpack_require__(160)
+	module.exports.Dispatcher = __webpack_require__(160);
 
 
 /***/ },
 /* 160 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/*
-	 * Copyright (c) 2014, Facebook, Inc.
+	/* WEBPACK VAR INJECTION */(function(process) {/**
+	 * Copyright (c) 2014-2015, Facebook, Inc.
 	 * All rights reserved.
 	 *
 	 * This source code is licensed under the BSD-style license found in the
@@ -21317,14 +21318,18 @@
 	 * of patent rights can be found in the PATENTS file in the same directory.
 	 *
 	 * @providesModule Dispatcher
-	 * @typechecks
+	 * 
+	 * @preventMunge
 	 */
 
-	"use strict";
+	'use strict';
+
+	exports.__esModule = true;
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 	var invariant = __webpack_require__(161);
 
-	var _lastID = 1;
 	var _prefix = 'ID_';
 
 	/**
@@ -21374,7 +21379,7 @@
 	 *
 	 * This payload is digested by both stores:
 	 *
-	 *    CountryStore.dispatchToken = flightDispatcher.register(function(payload) {
+	 *   CountryStore.dispatchToken = flightDispatcher.register(function(payload) {
 	 *     if (payload.actionType === 'country-update') {
 	 *       CountryStore.country = payload.selectedCountry;
 	 *     }
@@ -21402,14 +21407,10 @@
 	 *     flightDispatcher.register(function(payload) {
 	 *       switch (payload.actionType) {
 	 *         case 'country-update':
+	 *         case 'city-update':
 	 *           flightDispatcher.waitFor([CityStore.dispatchToken]);
 	 *           FlightPriceStore.price =
 	 *             getFlightPriceStore(CountryStore.country, CityStore.city);
-	 *           break;
-	 *
-	 *         case 'city-update':
-	 *           FlightPriceStore.price =
-	 *             FlightPriceStore(CountryStore.country, CityStore.city);
 	 *           break;
 	 *     }
 	 *   });
@@ -21419,131 +21420,109 @@
 	 * `FlightPriceStore`.
 	 */
 
+	var Dispatcher = (function () {
 	  function Dispatcher() {
-	    this.$Dispatcher_callbacks = {};
-	    this.$Dispatcher_isPending = {};
-	    this.$Dispatcher_isHandled = {};
-	    this.$Dispatcher_isDispatching = false;
-	    this.$Dispatcher_pendingPayload = null;
+	    _classCallCheck(this, Dispatcher);
+
+	    this._callbacks = {};
+	    this._isDispatching = false;
+	    this._isHandled = {};
+	    this._isPending = {};
+	    this._lastID = 1;
 	  }
 
 	  /**
 	   * Registers a callback to be invoked with every dispatched payload. Returns
 	   * a token that can be used with `waitFor()`.
-	   *
-	   * @param {function} callback
-	   * @return {string}
 	   */
-	  Dispatcher.prototype.register=function(callback) {
-	    var id = _prefix + _lastID++;
-	    this.$Dispatcher_callbacks[id] = callback;
+
+	  Dispatcher.prototype.register = function register(callback) {
+	    var id = _prefix + this._lastID++;
+	    this._callbacks[id] = callback;
 	    return id;
 	  };
 
 	  /**
 	   * Removes a callback based on its token.
-	   *
-	   * @param {string} id
 	   */
-	  Dispatcher.prototype.unregister=function(id) {
-	    invariant(
-	      this.$Dispatcher_callbacks[id],
-	      'Dispatcher.unregister(...): `%s` does not map to a registered callback.',
-	      id
-	    );
-	    delete this.$Dispatcher_callbacks[id];
+
+	  Dispatcher.prototype.unregister = function unregister(id) {
+	    !this._callbacks[id] ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Dispatcher.unregister(...): `%s` does not map to a registered callback.', id) : invariant(false) : undefined;
+	    delete this._callbacks[id];
 	  };
 
 	  /**
 	   * Waits for the callbacks specified to be invoked before continuing execution
 	   * of the current callback. This method should only be used by a callback in
 	   * response to a dispatched payload.
-	   *
-	   * @param {array<string>} ids
 	   */
-	  Dispatcher.prototype.waitFor=function(ids) {
-	    invariant(
-	      this.$Dispatcher_isDispatching,
-	      'Dispatcher.waitFor(...): Must be invoked while dispatching.'
-	    );
+
+	  Dispatcher.prototype.waitFor = function waitFor(ids) {
+	    !this._isDispatching ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Dispatcher.waitFor(...): Must be invoked while dispatching.') : invariant(false) : undefined;
 	    for (var ii = 0; ii < ids.length; ii++) {
 	      var id = ids[ii];
-	      if (this.$Dispatcher_isPending[id]) {
-	        invariant(
-	          this.$Dispatcher_isHandled[id],
-	          'Dispatcher.waitFor(...): Circular dependency detected while ' +
-	          'waiting for `%s`.',
-	          id
-	        );
+	      if (this._isPending[id]) {
+	        !this._isHandled[id] ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Dispatcher.waitFor(...): Circular dependency detected while ' + 'waiting for `%s`.', id) : invariant(false) : undefined;
 	        continue;
 	      }
-	      invariant(
-	        this.$Dispatcher_callbacks[id],
-	        'Dispatcher.waitFor(...): `%s` does not map to a registered callback.',
-	        id
-	      );
-	      this.$Dispatcher_invokeCallback(id);
+	      !this._callbacks[id] ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Dispatcher.waitFor(...): `%s` does not map to a registered callback.', id) : invariant(false) : undefined;
+	      this._invokeCallback(id);
 	    }
 	  };
 
 	  /**
 	   * Dispatches a payload to all registered callbacks.
-	   *
-	   * @param {object} payload
 	   */
-	  Dispatcher.prototype.dispatch=function(payload) {
-	    invariant(
-	      !this.$Dispatcher_isDispatching,
-	      'Dispatch.dispatch(...): Cannot dispatch in the middle of a dispatch.'
-	    );
-	    this.$Dispatcher_startDispatching(payload);
+
+	  Dispatcher.prototype.dispatch = function dispatch(payload) {
+	    !!this._isDispatching ? process.env.NODE_ENV !== 'production' ? invariant(false, 'Dispatch.dispatch(...): Cannot dispatch in the middle of a dispatch.') : invariant(false) : undefined;
+	    this._startDispatching(payload);
 	    try {
-	      for (var id in this.$Dispatcher_callbacks) {
-	        if (this.$Dispatcher_isPending[id]) {
+	      for (var id in this._callbacks) {
+	        if (this._isPending[id]) {
 	          continue;
 	        }
-	        this.$Dispatcher_invokeCallback(id);
+	        this._invokeCallback(id);
 	      }
 	    } finally {
-	      this.$Dispatcher_stopDispatching();
+	      this._stopDispatching();
 	    }
 	  };
 
 	  /**
 	   * Is this Dispatcher currently dispatching.
-	   *
-	   * @return {boolean}
 	   */
-	  Dispatcher.prototype.isDispatching=function() {
-	    return this.$Dispatcher_isDispatching;
+
+	  Dispatcher.prototype.isDispatching = function isDispatching() {
+	    return this._isDispatching;
 	  };
 
 	  /**
 	   * Call the callback stored with the given id. Also do some internal
 	   * bookkeeping.
 	   *
-	   * @param {string} id
 	   * @internal
 	   */
-	  Dispatcher.prototype.$Dispatcher_invokeCallback=function(id) {
-	    this.$Dispatcher_isPending[id] = true;
-	    this.$Dispatcher_callbacks[id](this.$Dispatcher_pendingPayload);
-	    this.$Dispatcher_isHandled[id] = true;
+
+	  Dispatcher.prototype._invokeCallback = function _invokeCallback(id) {
+	    this._isPending[id] = true;
+	    this._callbacks[id](this._pendingPayload);
+	    this._isHandled[id] = true;
 	  };
 
 	  /**
 	   * Set up bookkeeping needed when dispatching.
 	   *
-	   * @param {object} payload
 	   * @internal
 	   */
-	  Dispatcher.prototype.$Dispatcher_startDispatching=function(payload) {
-	    for (var id in this.$Dispatcher_callbacks) {
-	      this.$Dispatcher_isPending[id] = false;
-	      this.$Dispatcher_isHandled[id] = false;
+
+	  Dispatcher.prototype._startDispatching = function _startDispatching(payload) {
+	    for (var id in this._callbacks) {
+	      this._isPending[id] = false;
+	      this._isHandled[id] = false;
 	    }
-	    this.$Dispatcher_pendingPayload = payload;
-	    this.$Dispatcher_isDispatching = true;
+	    this._pendingPayload = payload;
+	    this._isDispatching = true;
 	  };
 
 	  /**
@@ -21551,21 +21530,24 @@
 	   *
 	   * @internal
 	   */
-	  Dispatcher.prototype.$Dispatcher_stopDispatching=function() {
-	    this.$Dispatcher_pendingPayload = null;
-	    this.$Dispatcher_isDispatching = false;
+
+	  Dispatcher.prototype._stopDispatching = function _stopDispatching() {
+	    delete this._pendingPayload;
+	    this._isDispatching = false;
 	  };
 
+	  return Dispatcher;
+	})();
 
 	module.exports = Dispatcher;
-
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(3)))
 
 /***/ },
 /* 161 */
-/***/ function(module, exports) {
+/***/ function(module, exports, __webpack_require__) {
 
-	/**
-	 * Copyright (c) 2014, Facebook, Inc.
+	/* WEBPACK VAR INJECTION */(function(process) {/**
+	 * Copyright 2013-2015, Facebook, Inc.
 	 * All rights reserved.
 	 *
 	 * This source code is licensed under the BSD-style license found in the
@@ -21588,8 +21570,8 @@
 	 * will remain to ensure logic does not differ in production.
 	 */
 
-	var invariant = function(condition, format, a, b, c, d, e, f) {
-	  if (false) {
+	var invariant = function (condition, format, a, b, c, d, e, f) {
+	  if (process.env.NODE_ENV !== 'production') {
 	    if (format === undefined) {
 	      throw new Error('invariant requires an error message argument');
 	    }
@@ -21598,17 +21580,13 @@
 	  if (!condition) {
 	    var error;
 	    if (format === undefined) {
-	      error = new Error(
-	        'Minified exception occurred; use the non-minified dev environment ' +
-	        'for the full error message and additional helpful warnings.'
-	      );
+	      error = new Error('Minified exception occurred; use the non-minified dev environment ' + 'for the full error message and additional helpful warnings.');
 	    } else {
 	      var args = [a, b, c, d, e, f];
 	      var argIndex = 0;
-	      error = new Error(
-	        'Invariant Violation: ' +
-	        format.replace(/%s/g, function() { return args[argIndex++]; })
-	      );
+	      error = new Error('Invariant Violation: ' + format.replace(/%s/g, function () {
+	        return args[argIndex++];
+	      }));
 	    }
 
 	    error.framesToPop = 1; // we don't care about invariant's own frame
@@ -21617,7 +21595,7 @@
 	};
 
 	module.exports = invariant;
-
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(3)))
 
 /***/ },
 /* 162 */
@@ -22693,18 +22671,11 @@
 	        break;
 	      // slower
 	      default:
-	        len = arguments.length;
-	        args = new Array(len - 1);
-	        for (i = 1; i < len; i++)
-	          args[i - 1] = arguments[i];
+	        args = Array.prototype.slice.call(arguments, 1);
 	        handler.apply(this, args);
 	    }
 	  } else if (isObject(handler)) {
-	    len = arguments.length;
-	    args = new Array(len - 1);
-	    for (i = 1; i < len; i++)
-	      args[i - 1] = arguments[i];
-
+	    args = Array.prototype.slice.call(arguments, 1);
 	    listeners = handler.slice();
 	    len = listeners.length;
 	    for (i = 0; i < len; i++)
@@ -22742,7 +22713,6 @@
 
 	  // Check for listener leak
 	  if (isObject(this._events[type]) && !this._events[type].warned) {
-	    var m;
 	    if (!isUndefined(this._maxListeners)) {
 	      m = this._maxListeners;
 	    } else {
@@ -22864,7 +22834,7 @@
 
 	  if (isFunction(listeners)) {
 	    this.removeListener(type, listeners);
-	  } else {
+	  } else if (listeners) {
 	    // LIFO order
 	    while (listeners.length)
 	      this.removeListener(type, listeners[listeners.length - 1]);
@@ -22885,15 +22855,20 @@
 	  return ret;
 	};
 
+	EventEmitter.prototype.listenerCount = function(type) {
+	  if (this._events) {
+	    var evlistener = this._events[type];
+
+	    if (isFunction(evlistener))
+	      return 1;
+	    else if (evlistener)
+	      return evlistener.length;
+	  }
+	  return 0;
+	};
+
 	EventEmitter.listenerCount = function(emitter, type) {
-	  var ret;
-	  if (!emitter._events || !emitter._events[type])
-	    ret = 0;
-	  else if (isFunction(emitter._events[type]))
-	    ret = 1;
-	  else
-	    ret = emitter._events[type].length;
-	  return ret;
+	  return emitter.listenerCount(type);
 	};
 
 	function isFunction(arg) {
@@ -45925,22 +45900,25 @@
 			clearable: React.PropTypes.bool, // should it be possible to reset value
 			delimiter: React.PropTypes.string, // delimiter to use to join multiple values
 			disabled: React.PropTypes.bool, // whether the Select is disabled or not
-			filterOption: React.PropTypes.func, // method to filter a single option: function(option, filterString)
-			filterOptions: React.PropTypes.func, // method to filter the options array: function([options], filterString, [values])
+			filterOption: React.PropTypes.func, // method to filter a single option  (option, filterString)
+			filterOptions: React.PropTypes.func, // method to filter the options array: function ([options], filterString, [values])
 			ignoreCase: React.PropTypes.bool, // whether to perform case-insensitive filtering
 			inputProps: React.PropTypes.object, // custom attributes for the Input (in the Select-control) e.g: {'data-foo': 'bar'}
+			isLoading: React.PropTypes.bool, // whether the Select is loading externally or not (such as options being loaded)
+			labelKey: React.PropTypes.string, // path of the label value in option objects
 			matchPos: React.PropTypes.string, // (any|start) match the start or entire string when filtering
 			matchProp: React.PropTypes.string, // (any|label|value) which option property to filter on
 			multi: React.PropTypes.bool, // multi-value input
 			name: React.PropTypes.string, // field name, for hidden <input /> tag
 			newOptionCreator: React.PropTypes.func, // factory to create new options when allowCreate set
 			noResultsText: React.PropTypes.string, // placeholder displayed when there are no matching search results
-			onBlur: React.PropTypes.func, // onBlur handler: function(event) {}
-			onChange: React.PropTypes.func, // onChange handler: function(newValue) {}
-			onFocus: React.PropTypes.func, // onFocus handler: function(event) {}
+			onBlur: React.PropTypes.func, // onBlur handler: function (event) {}
+			onChange: React.PropTypes.func, // onChange handler: function (newValue) {}
+			onFocus: React.PropTypes.func, // onFocus handler: function (event) {}
+			onInputChange: React.PropTypes.func, // onInputChange handler: function (inputValue) {}
 			onOptionLabelClick: React.PropTypes.func, // onCLick handler for value labels: function (value, event) {}
 			optionComponent: React.PropTypes.func, // option component to render in dropdown
-			optionRenderer: React.PropTypes.func, // optionRenderer: function(option) {}
+			optionRenderer: React.PropTypes.func, // optionRenderer: function (option) {}
 			options: React.PropTypes.array, // array of options
 			placeholder: React.PropTypes.string, // field placeholder, displayed when there's no value
 			searchable: React.PropTypes.bool, // whether to enable searching feature or not
@@ -45949,7 +45927,8 @@
 			singleValueComponent: React.PropTypes.func, // single value component when multiple is set to false
 			value: React.PropTypes.any, // initial field value
 			valueComponent: React.PropTypes.func, // value component to render in multiple mode
-			valueRenderer: React.PropTypes.func // valueRenderer: function(option) {}
+			valueKey: React.PropTypes.string, // path of the label value in option objects
+			valueRenderer: React.PropTypes.func // valueRenderer: function (option) {}
 		},
 
 		getDefaultProps: function getDefaultProps() {
@@ -45968,12 +45947,15 @@
 				disabled: false,
 				ignoreCase: true,
 				inputProps: {},
+				isLoading: false,
+				labelKey: 'label',
 				matchPos: 'any',
 				matchProp: 'any',
 				name: undefined,
 				newOptionCreator: undefined,
 				noResultsText: 'No results found',
 				onChange: undefined,
+				onInputChange: undefined,
 				onOptionLabelClick: undefined,
 				optionComponent: Option,
 				options: undefined,
@@ -45983,7 +45965,8 @@
 				searchPromptText: 'Type to search',
 				singleValueComponent: SingleValue,
 				value: undefined,
-				valueComponent: Value
+				valueComponent: Value,
+				valueKey: 'value'
 			};
 		},
 
@@ -46029,16 +46012,16 @@
 			};
 			this._bindCloseMenuIfClickedOutside = function () {
 				if (!document.addEventListener && document.attachEvent) {
-					document.attachEvent('onclick', this._closeMenuIfClickedOutside);
+					document.attachEvent('onclick', _this._closeMenuIfClickedOutside);
 				} else {
-					document.addEventListener('click', this._closeMenuIfClickedOutside);
+					document.addEventListener('click', _this._closeMenuIfClickedOutside);
 				}
 			};
 			this._unbindCloseMenuIfClickedOutside = function () {
 				if (!document.removeEventListener && document.detachEvent) {
-					document.detachEvent('onclick', this._closeMenuIfClickedOutside);
+					document.detachEvent('onclick', _this._closeMenuIfClickedOutside);
 				} else {
-					document.removeEventListener('click', this._closeMenuIfClickedOutside);
+					document.removeEventListener('click', _this._closeMenuIfClickedOutside);
 				}
 			};
 			this.setState(this.getStateFromValue(this.props.value));
@@ -46086,7 +46069,9 @@
 
 			if (!this.props.disabled && this._focusAfterUpdate) {
 				clearTimeout(this._blurTimeout);
+				clearTimeout(this._focusTimeout);
 				this._focusTimeout = setTimeout(function () {
+					if (!_this3.isMounted()) return;
 					_this3.getInputNode().focus();
 					_this3._focusAfterUpdate = false;
 				}, 50);
@@ -46120,6 +46105,8 @@
 		},
 
 		getStateFromValue: function getStateFromValue(value, options, placeholder) {
+			var _this4 = this;
+
 			if (!options) {
 				options = this.state.options;
 			}
@@ -46137,11 +46124,11 @@
 			var valueForState = null;
 			if (!this.props.multi && values.length) {
 				focusedOption = values[0];
-				valueForState = values[0].value;
+				valueForState = values[0][this.props.valueKey];
 			} else {
 				focusedOption = this.getFirstFocusableOption(filteredOptions);
 				valueForState = values.map(function (v) {
-					return v.value;
+					return v[_this4.props.valueKey];
 				}).join(this.props.delimiter);
 			}
 
@@ -46150,7 +46137,7 @@
 				values: values,
 				inputValue: '',
 				filteredOptions: filteredOptions,
-				placeholder: !this.props.multi && values.length ? values[0].label : placeholder,
+				placeholder: !this.props.multi && values.length ? values[0][this.props.labelKey] : placeholder,
 				focusedOption: focusedOption
 			};
 		},
@@ -46165,9 +46152,11 @@
 		},
 
 		initValuesArray: function initValuesArray(values, options) {
+			var _this5 = this;
+
 			if (!Array.isArray(values)) {
 				if (typeof values === 'string') {
-					values = values === '' ? [] : values.split(this.props.delimiter);
+					values = values === '' ? [] : this.props.multi ? values.split(this.props.delimiter) : [values];
 				} else {
 					values = values !== undefined && values !== null ? [values] : [];
 				}
@@ -46175,7 +46164,7 @@
 			return values.map(function (val) {
 				if (typeof val === 'string' || typeof val === 'number') {
 					for (var key in options) {
-						if (options.hasOwnProperty(key) && options[key] && (options[key].value === val || typeof options[key].value === 'number' && options[key].value.toString() === val)) {
+						if (options.hasOwnProperty(key) && options[key] && (options[key][_this5.props.valueKey] === val || typeof options[key][_this5.props.valueKey] === 'number' && options[key][_this5.props.valueKey].toString() === val)) {
 							return options[key];
 						}
 					}
@@ -46272,6 +46261,16 @@
 			}
 		},
 
+		handleMouseDownOnMenu: function handleMouseDownOnMenu(event) {
+			// if the event was triggered by a mousedown and not the primary
+			// button, or if the component is disabled, ignore it.
+			if (this.props.disabled || event.type === 'mousedown' && event.button !== 0) {
+				return;
+			}
+			event.stopPropagation();
+			event.preventDefault();
+		},
+
 		handleMouseDownOnArrow: function handleMouseDownOnArrow(event) {
 			// if the event was triggered by a mousedown and not the primary
 			// button, or if the component is disabled, ignore it.
@@ -46290,15 +46289,17 @@
 		},
 
 		handleInputFocus: function handleInputFocus(event) {
+			var _this6 = this;
+
 			var newIsOpen = this.state.isOpen || this._openAfterFocus;
 			this.setState({
 				isFocused: true,
 				isOpen: newIsOpen
 			}, function () {
 				if (newIsOpen) {
-					this._bindCloseMenuIfClickedOutside();
+					_this6._bindCloseMenuIfClickedOutside();
 				} else {
-					this._unbindCloseMenuIfClickedOutside();
+					_this6._unbindCloseMenuIfClickedOutside();
 				}
 			});
 			this._openAfterFocus = false;
@@ -46308,11 +46309,11 @@
 		},
 
 		handleInputBlur: function handleInputBlur(event) {
-			var _this4 = this;
+			var _this7 = this;
 
 			this._blurTimeout = setTimeout(function () {
-				if (_this4._focusAfterUpdate) return;
-				_this4.setState({
+				if (_this7._focusAfterUpdate || !_this7.isMounted()) return;
+				_this7.setState({
 					isFocused: false,
 					isOpen: false
 				});
@@ -46328,6 +46329,7 @@
 				case 8:
 					// backspace
 					if (!this.state.inputValue && this.props.backspaceRemoves) {
+						event.preventDefault();
 						this.popValue();
 					}
 					return;
@@ -46341,7 +46343,6 @@
 				case 13:
 					// enter
 					if (!this.state.isOpen) return;
-
 					this.selectFocusedOption();
 					break;
 				case 27:
@@ -46392,6 +46393,10 @@
 			// the latest value before setState() has completed.
 			this._optionsFilterString = event.target.value;
 
+			if (this.props.onInputChange) {
+				this.props.onInputChange(event.target.value);
+			}
+
 			if (this.props.asyncOptions) {
 				this.setState({
 					isLoading: true,
@@ -46413,16 +46418,19 @@
 		},
 
 		autoloadAsyncOptions: function autoloadAsyncOptions() {
-			var _this5 = this;
+			var _this8 = this;
 
-			this.loadAsyncOptions(this.props.value || '', {}, function () {
-				// update with fetched but don't focus
-				_this5.setValue(_this5.props.value, false);
+			this.setState({
+				isLoading: true
+			});
+			this.loadAsyncOptions(this.props.value || '', { isLoading: false }, function () {
+				// update with new options but don't focus
+				_this8.setValue(_this8.props.value, false);
 			});
 		},
 
 		loadAsyncOptions: function loadAsyncOptions(input, state, callback) {
-			var _this6 = this;
+			var _this9 = this;
 
 			var thisRequestId = this._currentRequestId = requestId++;
 			if (this.props.cacheAsyncResults) {
@@ -46450,25 +46458,27 @@
 
 			this.props.asyncOptions(input, function (err, data) {
 				if (err) throw err;
-				if (_this6.props.cacheAsyncResults) {
-					_this6._optionsCache[input] = data;
+				if (_this9.props.cacheAsyncResults) {
+					_this9._optionsCache[input] = data;
 				}
-				if (thisRequestId !== _this6._currentRequestId) {
+				if (thisRequestId !== _this9._currentRequestId) {
 					return;
 				}
-				var filteredOptions = _this6.filterOptions(data.options);
+				var filteredOptions = _this9.filterOptions(data.options);
 				var newState = {
 					options: data.options,
 					filteredOptions: filteredOptions,
-					focusedOption: _this6._getNewFocusedOption(filteredOptions)
+					focusedOption: _this9._getNewFocusedOption(filteredOptions)
 				};
 				for (var key in state) {
 					if (state.hasOwnProperty(key)) {
 						newState[key] = state[key];
 					}
 				}
-				_this6.setState(newState);
-				if (callback) callback.call(_this6, newState);
+				_this9.setState(newState);
+				if (callback) {
+					callback.call(_this9, newState);
+				}
 			});
 		},
 
@@ -46481,10 +46491,10 @@
 				return this.props.filterOptions.call(this, options, filterValue, exclude);
 			} else {
 				var filterOption = function filterOption(op) {
-					if (this.props.multi && exclude.indexOf(op.value) > -1) return false;
+					if (this.props.multi && exclude.indexOf(op[this.props.valueKey]) > -1) return false;
 					if (this.props.filterOption) return this.props.filterOption.call(this, op, filterValue);
-					var valueTest = String(op.value),
-					    labelTest = String(op.label);
+					var valueTest = String(op[this.props.valueKey]);
+					var labelTest = String(op[this.props.labelKey]);
 					if (this.props.ignoreCase) {
 						valueTest = valueTest.toLowerCase();
 						labelTest = labelTest.toLowerCase();
@@ -46567,9 +46577,12 @@
 		},
 
 		buildMenu: function buildMenu() {
-			var focusedValue = this.state.focusedOption ? this.state.focusedOption.value : null;
-			var renderLabel = this.props.optionRenderer || function (op) {
-				return op.label;
+			var _this10 = this;
+
+			var focusedValue = this.state.focusedOption ? this.state.focusedOption[this.props.valueKey] : null;
+			var renderLabel = this.props.optionRenderer;
+			if (!renderLabel) renderLabel = function (op) {
+				return op[_this10.props.labelKey];
 			};
 			if (this.state.filteredOptions.length > 0) {
 				focusedValue = focusedValue == null ? this.state.filteredOptions[0] : focusedValue;
@@ -46588,8 +46601,8 @@
 			}
 			var ops = Object.keys(options).map(function (key) {
 				var op = options[key];
-				var isSelected = this.state.value === op.value;
-				var isFocused = focusedValue === op.value;
+				var isSelected = this.state.value === op[this.props.valueKey];
+				var isFocused = focusedValue === op[this.props.valueKey];
 				var optionClass = classes({
 					'Select-option': true,
 					'is-selected': isSelected,
@@ -46601,7 +46614,7 @@
 				var mouseLeave = this.unfocusOption.bind(this, op);
 				var mouseDown = this.selectValue.bind(this, op);
 				var optionResult = React.createElement(this.props.optionComponent, {
-					key: 'option-' + op.value,
+					key: 'option-' + op[this.props.valueKey],
 					className: optionClass,
 					renderFunc: renderLabel,
 					mouseEnter: mouseEnter,
@@ -46619,7 +46632,7 @@
 				return ops;
 			} else {
 				var noResultsText, promptClass;
-				if (this.state.isLoading) {
+				if (this.isLoading()) {
 					promptClass = 'Select-searching';
 					noResultsText = this.props.searchingText;
 				} else if (this.state.inputValue || !this.props.asyncOptions) {
@@ -46644,13 +46657,17 @@
 			}
 		},
 
+		isLoading: function isLoading() {
+			return this.props.isLoading || this.state.isLoading;
+		},
+
 		render: function render() {
 			var selectClass = classes('Select', this.props.className, {
 				'is-multi': this.props.multi,
 				'is-searchable': this.props.searchable,
 				'is-open': this.state.isOpen,
 				'is-focused': this.state.isFocused,
-				'is-loading': this.state.isLoading,
+				'is-loading': this.isLoading(),
 				'is-disabled': this.props.disabled,
 				'has-value': this.state.value
 			});
@@ -46690,8 +46707,8 @@
 				}
 			}
 
-			var loading = this.state.isLoading ? React.createElement('span', { className: 'Select-loading', 'aria-hidden': 'true' }) : null;
-			var clear = this.props.clearable && this.state.value && !this.props.disabled ? React.createElement('span', { className: 'Select-clear', title: this.props.multi ? this.props.clearAllText : this.props.clearValueText, 'aria-label': this.props.multi ? this.props.clearAllText : this.props.clearValueText, onMouseDown: this.clearValue, onClick: this.clearValue, dangerouslySetInnerHTML: { __html: '&times;' } }) : null;
+			var loading = this.isLoading() ? React.createElement('span', { className: 'Select-loading', 'aria-hidden': 'true' }) : null;
+			var clear = this.props.clearable && this.state.value && !this.props.disabled ? React.createElement('span', { className: 'Select-clear', title: this.props.multi ? this.props.clearAllText : this.props.clearValueText, 'aria-label': this.props.multi ? this.props.clearAllText : this.props.clearValueText, onMouseDown: this.clearValue, onTouchEnd: this.clearValue, onClick: this.clearValue, dangerouslySetInnerHTML: { __html: '&times;' } }) : null;
 
 			var menu;
 			var menuProps;
@@ -46699,7 +46716,7 @@
 				menuProps = {
 					ref: 'menu',
 					className: 'Select-menu',
-					onMouseDown: this.handleMouseDown
+					onMouseDown: this.handleMouseDownOnMenu
 				};
 				menu = React.createElement(
 					'div',
@@ -46886,12 +46903,14 @@
 	  Licensed under the MIT License (MIT), see
 	  http://jedwatson.github.io/classnames
 	*/
+	/* global define */
 
 	(function () {
 		'use strict';
 
-		function classNames () {
+		var hasOwn = {}.hasOwnProperty;
 
+		function classNames () {
 			var classes = '';
 
 			for (var i = 0; i < arguments.length; i++) {
@@ -46900,15 +46919,13 @@
 
 				var argType = typeof arg;
 
-				if ('string' === argType || 'number' === argType) {
+				if (argType === 'string' || argType === 'number') {
 					classes += ' ' + arg;
-
 				} else if (Array.isArray(arg)) {
 					classes += ' ' + classNames.apply(null, arg);
-
-				} else if ('object' === argType) {
+				} else if (argType === 'object') {
 					for (var key in arg) {
-						if (arg.hasOwnProperty(key) && arg[key]) {
+						if (hasOwn.call(arg, key) && arg[key]) {
 							classes += ' ' + key;
 						}
 					}
@@ -46920,15 +46937,14 @@
 
 		if (typeof module !== 'undefined' && module.exports) {
 			module.exports = classNames;
-		} else if (true){
-			// AMD. Register as an anonymous module.
+		} else if (true) {
+			// register as 'classnames', consistent with npm package name
 			!(__WEBPACK_AMD_DEFINE_RESULT__ = function () {
 				return classNames;
 			}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 		} else {
 			window.classNames = classNames;
 		}
-
 	}());
 
 
@@ -46983,7 +46999,6 @@
 			}
 
 			if (this.props.optionLabelClick) {
-
 				label = React.createElement(
 					'a',
 					{ className: classes('Select-item-label__a', this.props.option.className),
@@ -47038,7 +47053,6 @@
 			value: React.PropTypes.object // selected option
 		},
 		render: function render() {
-
 			var classNames = classes('Select-placeholder', this.props.value && this.props.value.className);
 			return React.createElement(
 				'div',
@@ -58909,12 +58923,6 @@
 	        );
 	    }
 
-	    function _each(coll, iterator) {
-	        return _isArrayLike(coll) ?
-	            _arrayEach(coll, iterator) :
-	            _forEachOf(coll, iterator);
-	    }
-
 	    function _arrayEach(arr, iterator) {
 	        var index = -1,
 	            length = arr.length;
@@ -59062,23 +59070,26 @@
 	    async.eachOf = function (object, iterator, callback) {
 	        callback = _once(callback || noop);
 	        object = object || [];
-	        var size = _isArrayLike(object) ? object.length : _keys(object).length;
-	        var completed = 0;
-	        if (!size) {
-	            return callback(null);
-	        }
-	        _each(object, function (value, key) {
+
+	        var iter = _keyIterator(object);
+	        var key, completed = 0;
+
+	        while ((key = iter()) != null) {
+	            completed += 1;
 	            iterator(object[key], key, only_once(done));
-	        });
+	        }
+
+	        if (completed === 0) callback(null);
+
 	        function done(err) {
+	            completed--;
 	            if (err) {
 	                callback(err);
 	            }
-	            else {
-	                completed += 1;
-	                if (completed >= size) {
-	                    callback(null);
-	                }
+	            // Check key is null in case iterator isn't exhausted
+	            // and done resolved synchronously.
+	            else if (key === null && completed <= 0) {
+	                callback(null);
 	            }
 	        }
 	    };
@@ -59104,7 +59115,7 @@
 	                        return callback(null);
 	                    } else {
 	                        if (sync) {
-	                            async.nextTick(iterate);
+	                            async.setImmediate(iterate);
 	                        } else {
 	                            iterate();
 	                        }
@@ -59185,7 +59196,8 @@
 
 	    function _asyncMap(eachfn, arr, iterator, callback) {
 	        callback = _once(callback || noop);
-	        var results = [];
+	        arr = arr || [];
+	        var results = _isArrayLike(arr) ? [] : {};
 	        eachfn(arr, function (value, index, callback) {
 	            iterator(value, function (err, v) {
 	                results[index] = v;
@@ -59211,7 +59223,7 @@
 	                callback(err);
 	            });
 	        }, function (err) {
-	            callback(err || null, memo);
+	            callback(err, memo);
 	        });
 	    };
 
@@ -59219,6 +59231,20 @@
 	    async.reduceRight = function (arr, memo, iterator, callback) {
 	        var reversed = _map(arr, identity).reverse();
 	        async.reduce(reversed, memo, iterator, callback);
+	    };
+
+	    async.transform = function (arr, memo, iterator, callback) {
+	        if (arguments.length === 3) {
+	            callback = iterator;
+	            iterator = memo;
+	            memo = _isArray(arr) ? [] : {};
+	        }
+
+	        async.eachOf(arr, function(v, k, cb) {
+	            iterator(memo, v, k, cb);
+	        }, function(err) {
+	            callback(err, memo);
+	        });
 	    };
 
 	    function _filter(eachfn, arr, iterator, callback) {
@@ -59329,15 +59355,24 @@
 	        }
 	    };
 
-	    async.auto = function (tasks, callback) {
+	    async.auto = function (tasks, concurrency, callback) {
+	        if (!callback) {
+	            // concurrency is optional, shift the args.
+	            callback = concurrency;
+	            concurrency = null;
+	        }
 	        callback = _once(callback || noop);
 	        var keys = _keys(tasks);
 	        var remainingTasks = keys.length;
 	        if (!remainingTasks) {
 	            return callback(null);
 	        }
+	        if (!concurrency) {
+	            concurrency = remainingTasks;
+	        }
 
 	        var results = {};
+	        var runningTasks = 0;
 
 	        var listeners = [];
 	        function addListener(fn) {
@@ -59363,6 +59398,7 @@
 	        _arrayEach(keys, function (k) {
 	            var task = _isArray(tasks[k]) ? tasks[k]: [tasks[k]];
 	            var taskCallback = _restParam(function(err, args) {
+	                runningTasks--;
 	                if (args.length <= 1) {
 	                    args = args[0];
 	                }
@@ -59392,11 +59428,12 @@
 	                }
 	            }
 	            function ready() {
-	                return _reduce(requires, function (a, x) {
+	                return runningTasks < concurrency && _reduce(requires, function (a, x) {
 	                    return (a && results.hasOwnProperty(x));
 	                }, true) && !results.hasOwnProperty(k);
 	            }
 	            if (ready()) {
+	                runningTasks++;
 	                task[task.length - 1](taskCallback, results);
 	            }
 	            else {
@@ -59404,6 +59441,7 @@
 	            }
 	            function listener() {
 	                if (ready()) {
+	                    runningTasks++;
 	                    removeListener(listener);
 	                    task[task.length - 1](taskCallback, results);
 	                }
@@ -59695,8 +59733,17 @@
 	        function _next(q, tasks) {
 	            return function(){
 	                workers -= 1;
+
+	                var removed = false;
 	                var args = arguments;
 	                _arrayEach(tasks, function (task) {
+	                    _arrayEach(workersList, function (worker, index) {
+	                        if (worker === task && !removed) {
+	                            workersList.splice(index, 1);
+	                            removed = true;
+	                        }
+	                    });
+
 	                    task.callback.apply(task, args);
 	                });
 	                if (q.tasks.length + workers === 0) {
@@ -59707,6 +59754,7 @@
 	        }
 
 	        var workers = 0;
+	        var workersList = [];
 	        var q = {
 	            tasks: [],
 	            concurrency: concurrency,
@@ -59741,6 +59789,7 @@
 	                            q.empty();
 	                        }
 	                        workers += 1;
+	                        workersList.push(tasks[0]);
 	                        var cb = only_once(_next(q, tasks));
 	                        worker(data, cb);
 	                    }
@@ -59751,6 +59800,9 @@
 	            },
 	            running: function () {
 	                return workers;
+	            },
+	            workersList: function () {
+	                return workersList;
 	            },
 	            idle: function() {
 	                return q.tasks.length + workers === 0;
@@ -59880,7 +59932,7 @@
 	            var callback = args.pop();
 	            var key = hasher.apply(null, args);
 	            if (key in memo) {
-	                async.nextTick(function () {
+	                async.setImmediate(function () {
 	                    callback.apply(null, memo[key]);
 	                });
 	            }
@@ -60370,7 +60422,8 @@
 	    return {
 	      projectList: [],
 	      taskList: [],
-	      userList: []
+	      userList: [],
+	      userHaveTask: []
 	    };
 	  },
 
@@ -60436,9 +60489,16 @@
 	      return newItem;
 	    });
 	    console.log('_onFindTaskSuccess', data2);
+
+	        data2.forEach(function(item) {
+	      if (!item._user) {
+	        item._user = {};
+	      }
+	    });
 	    this.setState({
 	      taskList: data2
 	    });
+
 	  },
 	  _onFindTaskFail: function(data) {
 	  },
@@ -60458,12 +60518,28 @@
 	  _onGetAllProjectFail: function() {
 	  },
 
-	  onSelectChanged: function() {
-	    console.log('onSelectChanged');
+	  onSelectChanged: function(e) {
+	    var taskFiltered = this.state.taskList.filter(function(item) {
+	        return (item._project === e);
+	    });
+
+	    var userOfTask = [];
+	    _.forEach(taskFiltered, function(task) {
+	        userOfTask.push(task._user);
+	    });
+
+	    var userFiltered = _.uniq(userOfTask, function(user) {
+	        return user._id;
+	    });
+
+	    this.setState({
+	        taskList: taskFiltered,
+	        userList: userFiltered
+	    });
 	  },
 
 	  renderUserTask: function(arr, userId) {
-	    console.log('renderUserTask', arr, userId);
+	    //console.log('renderUserTask', arr, userId);
 	    var projectOptions = this.state.projectList;
 	    var timeRangeOptions = [
 	      { value: '0.5', label: '30 mins' },
@@ -60502,7 +60578,7 @@
 	        ), 
 	        React.DOM.div({className: "col-sm-2"}, 
 	          Select({name: "_project", clearable: false, disabled: true, value: item._project, 
-	            options: projectOptions})
+	            options: this.state.projectList})
 	        ), 
 	        React.DOM.div({className: "col-sm-2"}, 
 	          Select({name: "estimation", clearable: false, disabled: true, 
@@ -60528,7 +60604,7 @@
 	            ), 
 	            React.DOM.div({className: "col-sm-2"}, 
 	              Select({name: "_project", clearable: false, disabled: true, value: item._project, 
-	                options: projectOptions})
+	                options: this.state.projectList})
 	            ), 
 	            React.DOM.div({className: "col-sm-2"}, 
 	              Select({name: "estimation", clearable: false, disabled: true, 
@@ -60579,13 +60655,13 @@
 
 	    return (
 	      React.DOM.div({className: "row"}, 
-	        /*<div className="row">
-	          <div className="col-sm-5">
-	            <h4>CHOOSE PROJECT</h4>
-	            <Select name="form-field-name" value="nafoods" clearable={false}
-	              options={projectOptions} onChange={this.onSelectChanged} />
-	          </div>
-	        </div>*/
+	        React.DOM.div({className: "row"}, 
+	          React.DOM.div({className: "col-sm-5"}, 
+	            React.DOM.h4(null, "CHOOSE PROJECT"), 
+	            Select({name: "form-field-name", value: this.state.projectList._id, clearable: false, 
+	              options: this.state.projectList, onChange: this.onSelectChanged})
+	          )
+	        ), 
 	        React.DOM.div({className: "col-sm-12"}, 
 	          React.DOM.h4(null, "REPORT/TODAY")
 	        ), 
@@ -61081,6 +61157,7 @@
 
 	  onChange: function(e) {
 	    var model = this.state.model;
+	    console.log(model);
 	    model[e.target.name] = e.target.value;
 	    this.setState({model: model});
 	  },
@@ -61171,7 +61248,7 @@
 	            )
 	          ), 
 
-	          React.DOM.h3(null, "Project Detail"), 
+	          React.DOM.h3(null, "Project Detail"), this.state.model.name, 
 	          React.DOM.table({className: "table table-striped"}, 
 	            React.DOM.tbody(null, 
 	              this.state.userProjectList.map(function(item, index){
