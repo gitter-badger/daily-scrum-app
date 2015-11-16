@@ -21622,6 +21622,7 @@
 	  TASK_NEW: null,
 	  TASK_UPDATE: null,
 	  TASK_FIND: null,
+	  TASK_FIND_YESTERDAY: null,
 
 	  getAllUserProjects: null,
 
@@ -22932,6 +22933,9 @@
 
 	  FindTaskSuccess: null,
 	  FindTaskFail: null,
+
+	  FindTaskYesterdaySuccess: null,
+	  FindTaskYesterdayFail: null,
 
 	  REQUEST_START: null,
 	  REQUEST_END: null
@@ -60227,6 +60231,13 @@
 	      actionType: ActionTypes.TASK_FIND,
 	      data: data
 	    });
+	  },
+
+	    findYesterday: function(data) {
+	    AppDispatcher.handleViewAction({
+	      actionType: ActionTypes.TASK_FIND_YESTERDAY,
+	      data: data
+	    });
 	  }
 	};
 
@@ -60304,6 +60315,19 @@
 	    this.removeListener(Events.FindTaskFail, context);
 	  },
 
+	    addListenerOnFindTaskYesterdaySuccess: function(callback, context) {
+	    this.on(Events.FindTaskYesterdaySuccess, callback, context);
+	  },
+	  rmvListenerOnFindTaskYesterdaySuccess: function(context) {
+	    this.removeListener(Events.FindTaskYesterdaySuccess, context);
+	  },
+	  addListenerOnFindTaskYesterdayFail: function(callback, context) {
+	    this.on(Events.FindTaskYesterdayFail, callback, context);
+	  },
+	  rmvListenerOnFindTaskYesterdayFail: function(context) {
+	    this.removeListener(Events.FindTaskYesterdayFail, context);
+	  },
+
 	  newTask: function(data) {
 	    console.log('newTask', data);
 	    TaskApis.create(data).then(
@@ -60337,6 +60361,17 @@
 	      this.emit(Events.FindTaskFail, err);
 	    }.bind(this));
 	  },
+
+	    findYesterday: function(params) {
+	    TaskApis.find(null, params).then(
+	    function(body) {
+	      // console.log('find', Events.FindTaskSuccess, body.data);
+	      this.emit(Events.FindTaskYesterdaySuccess, body.data);
+	    }.bind(this),
+	    function(err) {
+	      this.emit(Events.FindTaskYesterdayFail, err);
+	    }.bind(this));
+	  }
 	});
 
 	/**
@@ -60364,6 +60399,10 @@
 
 	    case Actions.TASK_FIND:
 	      TaskStore.find(payload.data);
+	      break;
+
+	    case Actions.TASK_FIND_YESTERDAY:
+	      TaskStore.findYesterday(payload.data);
 	      break;
 
 	    default:
@@ -60423,9 +60462,14 @@
 	      projectList: [],
 	      taskDefault: [],
 	      taskList: [],
+	      taskYesterday: [],
 	      userDefault: [],
 	      userList: [],
-	      projectSelected: []
+	      projectSelected: [],
+	      dayOptions: [
+	        {label: 'Today', value: 1},
+	        {label: 'Yesterday', value: 2}
+	      ]
 	    };
 	  },
 
@@ -60444,11 +60488,19 @@
 	    TaskStore.addListenerOnFindTaskSuccess(this._onFindTaskSuccess, this);
 	    TaskStore.addListenerOnFindTaskFail(this._onFindTaskFail, this);
 
+	    TaskStore.addListenerOnFindTaskYesterdaySuccess(this._onFindTaskYesterdaySuccess, this);
+	    TaskStore.addListenerOnFindTaskYesterdayFail(this._onFindTaskYesterdayFail, this);
+
 	    UserStore.addListenerOnGetAllUsersSuccess(this._onGetAllUserSuccess, this);
 	    UserStore.addListenerOnGetAllUsersFail(this._onGetAllUserFail, this);
 
 	    TaskActions.find({
 	      q: { date: moment().format('YYYYMMDD') },
+	      l: {}
+	    });
+
+	    TaskActions.findYesterday({
+	      q: { date: moment().add(-1, 'days').format('YYYYMMDD') },
 	      l: {}
 	    });
 	    ProjectActions.all();
@@ -60461,6 +60513,9 @@
 
 	    TaskStore.rmvListenerOnFindTaskSuccess(this._onFindTaskSuccess, this);
 	    TaskStore.rmvListenerOnFindTaskFail(this._onFindTaskFail, this);
+
+	    TaskStore.rmvListenerOnFindTaskYesterdaySuccess(this._onFindTaskYesterdaySuccess, this);
+	    TaskStore.rmvListenerOnFindTaskYesterdayFail(this._onFindTaskYesterdayFail, this);
 
 	    UserStore.rmvListenerOnGetAllUsersSuccess(this._onGetAllUserSuccess);
 	    UserStore.rmvListenerOnGetAllUsersFail(this._onGetAllUserFail);
@@ -60507,6 +60562,30 @@
 	  _onFindTaskFail: function(data) {
 	  },
 
+	  _onFindTaskYesterdaySuccess: function(data){
+	    var data2 = data.map(function(item) {
+	      var newItem = lodash.clone(item);
+	      newItem.id = newItem._id;
+	      newItem._project = newItem._project && newItem._project._id;
+	      newItem.estimation = newItem.estimation && newItem.estimation.toString();
+	      // return the new one
+	      return newItem;
+	    });
+	    console.log('_onFindTaskSuccess', data2);
+
+	        data2.forEach(function(item) {
+	      if (!item._user) {
+	        item._user = {};
+	      }
+	    });
+	    this.setState({
+	      taskYesterday: data2
+	    });
+	  },
+
+	  _onFindTaskYesterdayFail: function(data){
+	  },
+
 	  _onGetAllProjectSuccess: function(body) {
 	    var pList = body.data.map(function(item) {
 	      return {
@@ -60544,6 +60623,18 @@
 	        taskList: taskFiltered,
 	        userList: userFiltered
 	    });
+	  },
+
+	  onSelectedDay: function(day){
+	    this.state.taskList = this.state.taskDefault;
+	    switch(day){
+	      case 1:
+	        this.setState({taskList: this.state.taskDefault});
+	      break;
+	      case 2:
+	        this.setState({taskList: this.state.taskYesterday});
+	      break;
+	    };
 	  },
 
 	    onClickSetDefault: function(){
@@ -60670,14 +60761,20 @@
 
 	    return (
 	      React.DOM.div({className: "row"}, 
-	      React.DOM.h4(null, "CHOOSE PROJECT"), 
+
 	        React.DOM.div({className: "row"}, 
+	        React.DOM.h4(null, "CHOOSE PROJECT"), 
 	          React.DOM.div({className: "col-sm-5"}, 
 
-	            Select({name: "form-field-name", value: this.state.projectList._id, clearable: false, 
+	            Select({name: "form-project", value: this.state.projectList._id, clearable: false, 
 	              options: this.state.projectList, onChange: this.onSelectedProject})
 	          ), 
-	          React.DOM.div({className: "col-sm-7"}, 
+	          React.DOM.div({className: "col-sm-3"}, 
+
+	            Select({name: "form-day", value: this.state.dayOptions.value, clearable: false, 
+	              options: this.state.dayOptions, onChange: this.onSelectedDay})
+	          ), 
+	          React.DOM.div({className: "col-sm-1"}, 
 	            React.DOM.button({className: "btn btn-default", onClick: this.onClickSetDefault}, "Set Default")
 	          )
 	        ), 

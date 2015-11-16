@@ -31,9 +31,14 @@ var ReportPage = React.createClass({
       projectList: [],
       taskDefault: [],
       taskList: [],
+      taskYesterday: [],
       userDefault: [],
       userList: [],
-      projectSelected: []
+      projectSelected: [],
+      dayOptions: [
+        {label: 'Today', value: 1},
+        {label: 'Yesterday', value: 2}
+      ]
     };
   },
 
@@ -52,11 +57,19 @@ var ReportPage = React.createClass({
     TaskStore.addListenerOnFindTaskSuccess(this._onFindTaskSuccess, this);
     TaskStore.addListenerOnFindTaskFail(this._onFindTaskFail, this);
 
+    TaskStore.addListenerOnFindTaskYesterdaySuccess(this._onFindTaskYesterdaySuccess, this);
+    TaskStore.addListenerOnFindTaskYesterdayFail(this._onFindTaskYesterdayFail, this);
+
     UserStore.addListenerOnGetAllUsersSuccess(this._onGetAllUserSuccess, this);
     UserStore.addListenerOnGetAllUsersFail(this._onGetAllUserFail, this);
 
     TaskActions.find({
       q: { date: moment().format('YYYYMMDD') },
+      l: {}
+    });
+
+    TaskActions.findYesterday({
+      q: { date: moment().add(-1, 'days').format('YYYYMMDD') },
       l: {}
     });
     ProjectActions.all();
@@ -69,6 +82,9 @@ var ReportPage = React.createClass({
 
     TaskStore.rmvListenerOnFindTaskSuccess(this._onFindTaskSuccess, this);
     TaskStore.rmvListenerOnFindTaskFail(this._onFindTaskFail, this);
+
+    TaskStore.rmvListenerOnFindTaskYesterdaySuccess(this._onFindTaskYesterdaySuccess, this);
+    TaskStore.rmvListenerOnFindTaskYesterdayFail(this._onFindTaskYesterdayFail, this);
 
     UserStore.rmvListenerOnGetAllUsersSuccess(this._onGetAllUserSuccess);
     UserStore.rmvListenerOnGetAllUsersFail(this._onGetAllUserFail);
@@ -115,6 +131,30 @@ var ReportPage = React.createClass({
   _onFindTaskFail: function(data) {
   },
 
+  _onFindTaskYesterdaySuccess: function(data){
+    var data2 = data.map(function(item) {
+      var newItem = lodash.clone(item);
+      newItem.id = newItem._id;
+      newItem._project = newItem._project && newItem._project._id;
+      newItem.estimation = newItem.estimation && newItem.estimation.toString();
+      // return the new one
+      return newItem;
+    });
+    console.log('_onFindTaskSuccess', data2);
+
+        data2.forEach(function(item) {
+      if (!item._user) {
+        item._user = {};
+      }
+    });
+    this.setState({
+      taskYesterday: data2
+    });
+  },
+
+  _onFindTaskYesterdayFail: function(data){
+  },
+
   _onGetAllProjectSuccess: function(body) {
     var pList = body.data.map(function(item) {
       return {
@@ -152,6 +192,18 @@ var ReportPage = React.createClass({
         taskList: taskFiltered,
         userList: userFiltered
     });
+  },
+
+  onSelectedDay: function(day){
+    this.state.taskList = this.state.taskDefault;
+    switch(day){
+      case 1:
+        this.setState({taskList: this.state.taskDefault});
+      break;
+      case 2:
+        this.setState({taskList: this.state.taskYesterday});
+      break;
+    };
   },
 
     onClickSetDefault: function(){
@@ -278,14 +330,20 @@ var ReportPage = React.createClass({
 
     return (
       <div className="row">
-      <h4>CHOOSE PROJECT</h4>
+
         <div className="row">
+        <h4>CHOOSE PROJECT</h4>
           <div className="col-sm-5">
 
-            <Select name="form-field-name" value={this.state.projectList._id} clearable={false}
+            <Select name="form-project" value={this.state.projectList._id} clearable={false}
               options={this.state.projectList} onChange={this.onSelectedProject} />
           </div>
-          <div className="col-sm-7">
+          <div className="col-sm-3">
+
+            <Select name="form-day" value={this.state.dayOptions.value} clearable={false}
+              options={this.state.dayOptions} onChange={this.onSelectedDay} />
+          </div>
+          <div className="col-sm-1">
             <button className="btn btn-default" onClick={this.onClickSetDefault}>Set Default</button>
           </div>
         </div>

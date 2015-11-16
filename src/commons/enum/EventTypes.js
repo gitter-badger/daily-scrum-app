@@ -39,6 +39,9 @@ module.exports = keyMirror({
   FindTaskSuccess: null,
   FindTaskFail: null,
 
+  FindTaskYesterdaySuccess: null,
+  FindTaskYesterdayFail: null,
+
   REQUEST_START: null,
   REQUEST_END: null
 

@@ -65,6 +65,19 @@ var TaskStore = assign({}, EventEmitter.prototype, {
     this.removeListener(Events.FindTaskFail, context);
   },
 
+    addListenerOnFindTaskYesterdaySuccess: function(callback, context) {
+    this.on(Events.FindTaskYesterdaySuccess, callback, context);
+  },
+  rmvListenerOnFindTaskYesterdaySuccess: function(context) {
+    this.removeListener(Events.FindTaskYesterdaySuccess, context);
+  },
+  addListenerOnFindTaskYesterdayFail: function(callback, context) {
+    this.on(Events.FindTaskYesterdayFail, callback, context);
+  },
+  rmvListenerOnFindTaskYesterdayFail: function(context) {
+    this.removeListener(Events.FindTaskYesterdayFail, context);
+  },
+
   newTask: function(data) {
     console.log('newTask', data);
     TaskApis.create(data).then(
@@ -98,6 +111,17 @@ var TaskStore = assign({}, EventEmitter.prototype, {
       this.emit(Events.FindTaskFail, err);
     }.bind(this));
   },
+
+    findYesterday: function(params) {
+    TaskApis.find(null, params).then(
+    function(body) {
+      // console.log('find', Events.FindTaskSuccess, body.data);
+      this.emit(Events.FindTaskYesterdaySuccess, body.data);
+    }.bind(this),
+    function(err) {
+      this.emit(Events.FindTaskYesterdayFail, err);
+    }.bind(this));
+  }
 });
 
 /**
@@ -125,6 +149,10 @@ AppDispatcher.register(function(payload) {
 
     case Actions.TASK_FIND:
       TaskStore.find(payload.data);
+      break;
+
+    case Actions.TASK_FIND_YESTERDAY:
+      TaskStore.findYesterday(payload.data);
       break;
 
     default:

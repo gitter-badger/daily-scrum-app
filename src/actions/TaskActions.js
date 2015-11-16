@@ -32,6 +32,13 @@ var AppActions = {
       actionType: ActionTypes.TASK_FIND,
       data: data
     });
+  },
+
+    findYesterday: function(data) {
+    AppDispatcher.handleViewAction({
+      actionType: ActionTypes.TASK_FIND_YESTERDAY,
+      data: data
+    });
   }
 };
 
