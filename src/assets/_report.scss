@@ -2,3 +2,13 @@
 .username-title {
   font-weight: bold;
 }
+
+.header-block {
+  margin-bottom: 30px;
+
+  &:after {
+    clear: both;
+    display: block;
+    content: '';
+  }
+}

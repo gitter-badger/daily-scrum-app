@@ -331,25 +331,28 @@ var ReportPage = React.createClass({
     return (
       <div className="row">
 
-        <div className="row">
-        <h4>CHOOSE PROJECT</h4>
-          <div className="col-sm-5">
-
-            <Select name="form-project" value={this.state.projectList._id} clearable={false}
+        <div className="header-block">
+          <div className="col-sm-12">
+            <h3>REPORT</h3>
+          </div>
+          <div className="col-sm-6">
+            <Select name="form-project" value={this.state.projectList._id} clearable={true}
               options={this.state.projectList} onChange={this.onSelectedProject} />
           </div>
-          <div className="col-sm-3">
 
-            <Select name="form-day" value={this.state.dayOptions.value} clearable={false}
+          <div className="col-sm-2">
+            <Select name="form-day" value={this.state.dayOptions.value} clearable={true}
               options={this.state.dayOptions} onChange={this.onSelectedDay} />
           </div>
-          <div className="col-sm-1">
-            <button className="btn btn-default" onClick={this.onClickSetDefault}>Set Default</button>
+
+          <div className="col-sm-2">
+            <button className="btn btn-link" onClick={this.onClickSetDefault}>Set Default</button>
           </div>
         </div>
-        <div className="col-sm-12">
+
+        {/*<div className="col-sm-12">
           <h4>REPORT/TODAY</h4>
-        </div>
+        </div>*/}
         {userListRender}
       </div>
     );

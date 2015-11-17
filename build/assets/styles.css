@@ -351,3 +351,10 @@ li {
 
 .username-title {
   font-weight: bold; }
+
+.header-block {
+  margin-bottom: 30px; }
+  .header-block:after {
+    clear: both;
+    display: block;
+    content: ''; }
